@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from typing import Optional, List
 from urllib.parse import parse_qs
+from fastapi.middleware.cors import CORSMiddleware
 
 from app import models, schemas, crud
 from app.database import SessionLocal, engine
@@ -14,6 +15,15 @@ from app.config import settings
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # yoki frontend manzilingiz masalan: ["http://localhost:5173"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -116,11 +126,12 @@ async def update_location(location: schemas.LocationUpdate, current_user: models
     
     return {"status": "Location updated"}
 
+
 @app.websocket("/ws/location")
 async def websocket_location(websocket: WebSocket):
     await websocket.accept()
+    print("connection open")
 
-    # Tokenni query stringdan olish
     token_query = parse_qs(websocket.url.query).get("token", [None])[0]
     if not token_query:
         await websocket.close(code=1008)
@@ -139,6 +150,22 @@ async def websocket_location(websocket: WebSocket):
     active_connections.append(websocket)
     try:
         while True:
-            await websocket.receive_text()
+            await websocket.receive_text()  # ❗ bu yer kerak!
     except:
+        print("connection closed")
         active_connections.remove(websocket)
+
+@app.get("/assigned-driver-location")
+def get_assigned_driver_location(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    location = crud.get_driver_location_for_user(db, current_user.id)
+    if not location:
+        raise HTTPException(status_code=404, detail="Driver or location not found")
+    return {
+        "driver_id": location.user_id,
+        "lat": location.latitude,
+        "lng": location.longitude,
+        "timestamp": location.timestamp
+    }

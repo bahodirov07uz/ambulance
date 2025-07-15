@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-
+from datetime import datetime
 class UserBase(BaseModel):
     username: str
     email: str
@@ -33,3 +33,13 @@ class TokenData(BaseModel):
 class LocationUpdate(BaseModel):
     latitude: float
     longitude: float
+
+class LocationOut(BaseModel):
+    id: int
+    user_id: int
+    latitude: float
+    longitude: float
+    timestamp: datetime
+
+    class Config:
+        orm_mode = True
