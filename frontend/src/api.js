@@ -8,7 +8,7 @@ export const register = (data) =>
   axios.post(`${API_URL}/users/`, data);
 
 export const updateLocation = (token, data) =>
-  axios.post(`${API_URL}/update_location`, data, {
+  axios.post(`${API_URL}/location/update_location`, data, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

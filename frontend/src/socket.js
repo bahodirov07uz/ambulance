@@ -7,7 +7,7 @@ export const connectSocket = (onMessage) => {
     return;
   }
 
-  const socket = new WebSocket(`ws://localhost:8000/ws/location?token=${token}`);
+  const socket = new WebSocket(`ws://localhost:8000/location/ws/location?token=${token}`);
 
   socket.onopen = () => {
     console.log("WebSocket connected");

@@ -9,11 +9,12 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-
+    phone_number: Optional[str] = None
+    
 class User(UserBase):
     id: int
     is_active: bool
-
+    phone_number: Optional[str] = None
     class Config:
         orm_mode = True
 
