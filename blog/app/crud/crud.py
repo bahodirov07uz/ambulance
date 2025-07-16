@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
-from . import models, schemas
-from .config import pwd_context
+
+from .. schemas import schemas
+from ..models import models
+from ..config import pwd_context
 from datetime import datetime
 
 def get_user_by_email(db: Session, email: str):

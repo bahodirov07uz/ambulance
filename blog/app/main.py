@@ -8,9 +8,11 @@ from typing import Optional, List
 from urllib.parse import parse_qs
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import models, schemas, crud
+from blog.app.models import models
 from app.database import SessionLocal, engine
 from app.config import settings
+from blog.app.crud import crud
+from blog.app.schemas import schemas
 
 models.Base.metadata.create_all(bind=engine)
 
