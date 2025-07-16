@@ -1,17 +1,22 @@
-from sqlalchemy.orm import Session
-
-from .. schemas import schemas
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy import and_, desc
+from ..schemas import schemas
 from ..models import models
 from ..config import pwd_context
 from datetime import datetime
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
+# === User CRUD ===
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+async def get_user_by_email(db: AsyncSession, email: str):
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    return result.scalars().first()
 
-def create_user(db: Session, user: schemas.UserCreate):
+async def get_user_by_username(db: AsyncSession, username: str):
+    result = await db.execute(select(models.User).where(models.User.username == username))
+    return result.scalars().first()
+
+async def create_user(db: AsyncSession, user: schemas.UserCreate):
     hashed_password = pwd_context.hash(user.password)
     db_user = models.User(
         username=user.username,
@@ -19,63 +24,78 @@ def create_user(db: Session, user: schemas.UserCreate):
         hashed_password=hashed_password,
         role=user.role,
         is_active=True,
-        phone_number=user.phone_number  # agar schemas.UserCreate da mavjud bo‘lsa
+        phone_number=user.phone_number
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user
 
-def verify_code(db:Session, user_id:int,code:str):
-    verification = db.query(models.PhoneVerificationCode).filter(
-        models.PhoneVerificationCode.user_id == user_id,
-        models.PhoneVerificationCode.code == code,
-        models.PhoneVerificationCode.expires_at >= datetime.utcnow()
-    ).first()
-    
+async def verify_code(db: AsyncSession, user_id: int, code: str):
+    result = await db.execute(
+        select(models.PhoneVerificationCode).where(
+            and_(
+                models.PhoneVerificationCode.user_id == user_id,
+                models.PhoneVerificationCode.code == code,
+                models.PhoneVerificationCode.expires_at >= datetime.utcnow()
+            )
+        )
+    )
+    verification = result.scalars().first()
     if verification:
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user:
-        user.is_verified = True
-        db.commit()
-        return True
+        user_result = await db.execute(select(models.User).where(models.User.id == user_id))
+        user = user_result.scalars().first()
+        if user:
+            user.is_verified = True
+            await db.commit()
+            return True
     return False
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+async def get_users(db: AsyncSession, skip: int = 0, limit: int = 100):
+    result = await db.execute(select(models.User).offset(skip).limit(limit))
+    return result.scalars().all()
 
-def get_users_by_role(db: Session, role: str, skip: int = 0, limit: int = 100):
-    return db.query(models.User).filter(models.User.role == role).offset(skip).limit(limit).all()
+async def get_users_by_role(db: AsyncSession, role: str, skip: int = 0, limit: int = 100):
+    result = await db.execute(
+        select(models.User).where(models.User.role == role).offset(skip).limit(limit)
+    )
+    return result.scalars().all()
 
-#locations
-def get_user_locations(db: Session, user_id: int):
-    return db.query(models.Location).filter(models.Location.user_id == user_id).order_by(models.Location.timestamp.desc()).all()
-    
-def assign_driver_to_user(db: Session, user_id: int, driver_id: int):
+# === Location CRUD ===
+
+async def get_user_locations(db: AsyncSession, user_id: int):
+    result = await db.execute(
+        select(models.Location)
+        .where(models.Location.user_id == user_id)
+        .order_by(desc(models.Location.timestamp))
+    )
+    return result.scalars().all()
+
+async def assign_driver_to_user(db: AsyncSession, user_id: int, driver_id: int):
     assignment = models.Assignment(user_id=user_id, driver_id=driver_id)
     db.add(assignment)
-    db.commit()
+    await db.commit()
     return assignment
 
-def get_driver_location_for_user(db: Session, user_id: int):
-    assignment = db.query(models.Assignment).filter_by(user_id=user_id).first()
+async def get_driver_location_for_user(db: AsyncSession, user_id: int):
+    result = await db.execute(select(models.Assignment).where(models.Assignment.user_id == user_id))
+    assignment = result.scalars().first()
     if not assignment:
         return None
-    latest_location = (
-        db.query(models.Location)
-        .filter(models.Location.user_id == assignment.driver_id)
-        .order_by(models.Location.timestamp.desc())
-        .first()
+    location_result = await db.execute(
+        select(models.Location)
+        .where(models.Location.user_id == assignment.driver_id)
+        .order_by(desc(models.Location.timestamp))
     )
-    return latest_location
+    return location_result.scalars().first()
 
-def update_user_location(db: Session, user_id: int, location: schemas.LocationUpdate):
+async def update_user_location(db: AsyncSession, user_id: int, location: schemas.LocationUpdate):
     db_location = models.Location(
         user_id=user_id,
         latitude=location.latitude,
         longitude=location.longitude
     )
     db.add(db_location)
-    db.commit()
-    db.refresh(db_location)
+    await db.commit()
+    await db.refresh(db_location)
     return db_location
