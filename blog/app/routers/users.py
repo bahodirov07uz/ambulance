@@ -17,10 +17,3 @@ async def read_users(skip: int = 0, limit: int = 100,
         raise HTTPException(status_code=403, detail="Yetarli ruxsatlar yo'q")
     return await crud.get_users(db, skip=skip, limit=limit)
 
-@router.get("/drivers/", response_model=List[schemas.UserOut])
-async def read_drivers(skip: int = 0, limit: int = 100,
-                       current_user: models.User = Depends(get_current_active_user),
-                       db: AsyncSession = Depends(get_db)):
-    if current_user.role != "user":
-        raise HTTPException(status_code=403, detail="Yetarli ruxsatlar yo'q")
-    return await crud.get_users_by_role(db, role="driver", skip=skip, limit=limit)

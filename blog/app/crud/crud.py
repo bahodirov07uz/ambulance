@@ -99,3 +99,4 @@ async def update_user_location(db: AsyncSession, user_id: int, location: schemas
     await db.commit()
     await db.refresh(db_location)
     return db_location
+

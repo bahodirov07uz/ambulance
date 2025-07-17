@@ -74,3 +74,4 @@ async def get_assigned_driver_location(
         "lng": location.longitude,
         "timestamp": location.timestamp
     }
+

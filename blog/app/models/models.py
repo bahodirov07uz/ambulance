@@ -1,7 +1,16 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import relationship
 from ..database import Base
+from sqlalchemy.sql import func
+import enum
+
+class RequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    ASSIGNED = "assigned"
+    ACCEPTED = "accepted"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
 
 class User(Base):
     __tablename__ = "users"
@@ -16,6 +25,55 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
 
     locations = relationship("Location", back_populates="user")
+
+    # Foydalanuvchi yuborgan so‘rovlar
+    emergency_requests = relationship(
+        "EmergencyRequest",
+        back_populates="user",
+        foreign_keys="EmergencyRequest.user_id"
+    )
+
+    # Haydovchiga biriktirilgan so‘rovlar
+    driver_requests = relationship(
+        "EmergencyRequest",
+        back_populates="driver",
+        foreign_keys="EmergencyRequest.driver_id"
+    )
+    
+class Driver(Base):
+    __tablename__ = "driver"
+
+    id = Column(Integer,primary_key=True,unique=True,index=True)
+    car_number = Column(String,nullable=False)
+    car_type = Column(String)
+    is_available = Column(Boolean,default=False)
+    
+    current_latitude = Column(Float, nullable=False)
+    current_longitude = Column(Float, nullable=False)
+    
+    user = relationship("User",backref="driver_profile")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False) 
+
+class EmergencyRequest(Base):
+    __tablename__ = "emergency_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    address = Column(String(500), nullable=True)
+    description = Column(String(1000), nullable=True)
+    status = Column(Enum(RequestStatus), nullable=False, default=RequestStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    assigned_at = Column(DateTime(timezone=True), nullable=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    user = relationship("User", back_populates="emergency_requests", foreign_keys=[user_id])
+    driver = relationship("User", back_populates="driver_requests", foreign_keys=[driver_id])
+
 
 class PhoneVerificationCode(Base):
     __tablename__ = "phone_verification_codes"
@@ -44,3 +102,5 @@ class Assignment(Base):
 
     user = relationship("User", foreign_keys=[user_id])
     driver = relationship("User", foreign_keys=[driver_id])
+    
+    

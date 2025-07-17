@@ -31,3 +31,4 @@ async def get_user_from_token(token: str, db: AsyncSession):
         return await crud.get_user_by_username(db, username)
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalid")
+
