@@ -4,8 +4,7 @@ from ..schemas.schemas import EmergencyRequestCreate, DriverUpdateLocation
 from app.dependecies import get_async_session
 from ..services import emergency_request as emergency
 from ..models.models import EmergencyRequest
-from app.websocket import manager 
-
+from app.websocket.manager import manager
 router = APIRouter(prefix="/emergency", tags=["Emergency Requests"])
 
 
