@@ -61,8 +61,12 @@ async def assign_driver(db: AsyncSession, request_id: int, driver_id: int):
         await db.commit()
         await db.refresh(req)
         return req
-    return None
-
+    return {
+        "status": "assigned",
+        "driver_id": driver.user_id,
+        "request_id": req.id,
+        "assigned_at": req.assigned_at.isoformat()
+    }
 
 # Haydovchining real-time lokatsiyasini yangilash
 async def update_driver_location(db: AsyncSession, driver_id: int, lat: float, lng: float):
@@ -74,4 +78,9 @@ async def update_driver_location(db: AsyncSession, driver_id: int, lat: float, l
         await db.commit()
         await db.refresh(driver)
         return driver
-    return None
+    return {
+        "status": "success",
+        "driver_id": driver.user_id,
+        "new_latitude": driver.current_latitude,
+        "new_longitude": driver.current_longitude,
+    }

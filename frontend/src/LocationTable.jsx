@@ -6,7 +6,7 @@ const LocationTable = ({ token }) => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8000/locations/", {
+      .get("http://localhost:8000/emergency/", {
         headers: {
           Authorization: `Bearer ${token}`
         }
