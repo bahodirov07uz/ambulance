@@ -3,8 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..schemas.schemas import EmergencyRequestCreate, DriverUpdateLocation
 from app.dependecies import get_async_session
 from ..services import emergency_request as emergency
-from ..models.models import EmergencyRequest
+from ..models.models import EmergencyRequest,Driver
 from app.websocket.manager import manager
+from sqlalchemy.future import select
+
 router = APIRouter(prefix="/emergency", tags=["Emergency Requests"])
 
 
@@ -50,3 +52,24 @@ async def update_driver_location(
     })
 
     return {"message": "Location updated", "driver_id": driver_id}
+
+@router.post("/emergencies/{emergency_id}/complete")
+async def complete_emergency(emergency_id: int, db: AsyncSession = Depends(get_async_session)):
+    result = await db.execute(select(EmergencyRequest).where(EmergencyRequest.id == emergency_id))
+    emergency = result.scalar_one_or_none()
+
+    if not emergency:
+        raise HTTPException(status_code=404, detail="Emergency topilmadi")
+
+    # Emergency holatini yakunlangan deb belgilash
+    emergency.status = "completed"
+
+    # Unga biriktirilgan driverni bo‘shatamiz
+    if emergency.driver_id:
+        driver_result = await db.execute(select(Driver).where(Driver.id == emergency.driver_id))
+        driver = driver_result.scalar_one_or_none()
+        if driver:
+            driver.is_available = True
+
+    await db.commit()
+    return {"detail": "Emergency yakunlandi va driver bo‘shatildi"}

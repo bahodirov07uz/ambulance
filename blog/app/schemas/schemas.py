@@ -57,6 +57,7 @@ class DriverBase(BaseModel):
     user_id: int
     car_number: str
     car_type: Optional[str] = None
+    phone_number: str
     is_available: Optional[bool] = False
     current_latitude: float
     current_longitude: float
