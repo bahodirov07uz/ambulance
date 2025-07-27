@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.models import models
-from app.routers import auth, users,emergency,drivers,websocket  # Routerlarni shu yerga qo‘shing
+from app.routers import auth, users,emergency,drivers,websocket,hospital
 
 app = FastAPI(
     title="Ambulance Real-Time API",
@@ -25,7 +25,7 @@ app.include_router(users.router)
 app.include_router(emergency.router)
 app.include_router(drivers.router)
 app.include_router(websocket.router)
-
+app.include_router(hospital.router)
 
 # Startup event orqali jadval yaratish
 @app.on_event("startup")

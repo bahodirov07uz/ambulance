@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..models.models import Driver, EmergencyRequest, RequestStatus
+from ..models.models import Driver, EmergencyRequest, RequestStatus,Hospital
 from ..schemas.schemas import DriverCreate, EmergencyRequestCreate
 from datetime import datetime
 from math import sqrt
@@ -8,15 +8,39 @@ from math import sqrt
 
 # Haydovchini eng yaqiniga biriktirib request yaratish
 async def create_emergency_request(db: AsyncSession, data: EmergencyRequestCreate):
-    # 1. Requestni yaratamiz
-    request = EmergencyRequest(**data.dict(), status=RequestStatus.PENDING)
+    # 1. Eng yaqin hospitalni topamiz
+    result = await db.execute(select(Hospital))
+    hospitals = result.scalars().all()
+
+    if not hospitals:
+        raise Exception("Hech qanday hospital mavjud emas")
+
+    def hospital_distance(hosp):
+        return sqrt(
+            (hosp.latitude - data.latitude) ** 2 +
+            (hosp.longitude - data.longitude) ** 2
+        )
+
+    nearest_hospital = min(hospitals, key=hospital_distance)
+
+    # 2. Requestni yaratamiz, hospital_id bilan
+    request = EmergencyRequest(
+        **data.dict(),
+        status=RequestStatus.PENDING,
+        hospital_id=nearest_hospital.id
+    )
     db.add(request)
     await db.commit()
     await db.refresh(request)
 
-    # 2. Eng yaqin available haydovchini topamiz
-    result = await db.execute(select(Driver).where(Driver.is_available == True))
-    drivers = result.scalars().all()
+    # 3. Shu hospitaldagi available haydovchilarni topamiz
+    driver_result = await db.execute(
+        select(Driver).where(
+            Driver.is_available == True,
+            Driver.hospital_id == nearest_hospital.id
+        )
+    )
+    drivers = driver_result.scalars().all()
 
     if not drivers:
         return request  # Hozircha available driver yo‘q
@@ -29,18 +53,15 @@ async def create_emergency_request(db: AsyncSession, data: EmergencyRequestCreat
 
     nearest_driver = min(drivers, key=calc_distance)
 
-    # 3. Requestga haydovchini biriktiramiz
+    # 4. Driverni requestga biriktiramiz
     request.driver_id = nearest_driver.user_id
     request.status = RequestStatus.ASSIGNED
     request.assigned_at = datetime.utcnow()
-
-    # 4. Haydovchini band qilamiz
     nearest_driver.is_available = False
 
     await db.commit()
     await db.refresh(request)
     return request
-
 
 # Haydovchini so‘rovga qo‘lda biriktirish (fallback yoki admin uchun)
 async def assign_driver(db: AsyncSession, request_id: int, driver_id: int):

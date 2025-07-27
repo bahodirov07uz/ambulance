@@ -5,7 +5,13 @@ from ..database import Base
 from sqlalchemy.sql import func
 import enum
 
-class RequestStatus(str, enum.Enum):
+class UserRole(enum.Enum):  # str dan emas, enum.Enum dan meros oling
+    SUPERADMIN = "superadmin"
+    HOSPITAL_ADMIN = "hospital_admin"
+    USER = "user"
+    DRIVER = "driver"
+    
+class RequestStatus(enum.Enum):  # Bu ham xuddi shunday
     PENDING = "pending"
     ASSIGNED = "assigned"
     ACCEPTED = "accepted"
@@ -17,11 +23,12 @@ class Hospital(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
-    address = Column(String, nullable=True)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+
     phone_number = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    users = relationship("User", back_populates="hospital")
     drivers = relationship("Driver", back_populates="hospital")
 
 class User(Base):
@@ -32,11 +39,12 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     phone_number = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String)
-    role = Column(String)
+    role = Column(Enum(UserRole), default=UserRole.USER)
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=True)
+
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
 
-    hospital = relationship("Hospital", back_populates="users")
     locations = relationship("Location", back_populates="user")
 
     emergency_requests = relationship(
@@ -75,6 +83,7 @@ class EmergencyRequest(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"))
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     address = Column(String(500), nullable=True)
@@ -87,6 +96,7 @@ class EmergencyRequest(Base):
 
     user = relationship("User", back_populates="emergency_requests", foreign_keys=[user_id])
     driver = relationship("User", back_populates="driver_requests", foreign_keys=[driver_id])
+    hospital = relationship("Hospital")
 
 class PhoneVerificationCode(Base):
     __tablename__ = "phone_verification_codes"

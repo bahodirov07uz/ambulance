@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from enum import Enum
+from app.models.models import UserRole
 class UserBase(BaseModel):
     username: str
     email: str
@@ -21,7 +22,9 @@ class User(UserBase):
 class UserOut(UserBase):
     id: int
     is_active: bool
-
+    role: UserRole
+    hospital_id: Optional[int]
+    
     class Config:
         orm_mode = True
 
@@ -61,6 +64,8 @@ class DriverBase(BaseModel):
     is_available: Optional[bool] = False
     current_latitude: float
     current_longitude: float
+    
+    hospital_id: int
 
 
 class DriverCreate(DriverBase):
@@ -85,6 +90,7 @@ class EmergencyRequestBase(BaseModel):
     longitude: float
     address: Optional[str] = None
     description: Optional[str] = None
+    hospital_id: int
 
 
 class EmergencyRequestCreate(EmergencyRequestBase):
@@ -112,7 +118,21 @@ class EmergencyRequestOut(EmergencyRequestBase):
     class Config:
         orm_mode = True
 
+#hospital
+class HospitalBase(BaseModel):
+    name: str
+    latitude: float
+    longitude: float
+    phone_number: Optional[str] = None
 
+class HospitalCreate(HospitalBase):
+    pass
+
+class HospitalResponse(HospitalBase):
+    id: int
+    class Config:
+        orm_mode = True
+        
 # DriverCreate	Haydovchi yaratishda ishlatiladi
 # DriverOut	Frontendga haydovchi ma’lumotini yuborish
 # DriverUpdateLocation	Lokatsiyani real-time yangilash uchun
